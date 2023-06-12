@@ -123,7 +123,7 @@ int Open_clientfd(char *hostname, int port);
 int Open_listenfd(int port); 
 
 
-
+/**** Dekel&izak******/
 typedef struct m_request{
 	// a way to identify request
 	struct timeval arrival;
@@ -143,6 +143,15 @@ typedef struct m_reqqueue{
 	int numOfRequests;
 	
 }requestQueue;
+typedef struct m_thread_node{
+    pthread_t thready;
+    int numOfRequests;
+    int threadId;
+}threadNode;
+typedef struct m_threads{
+    threadNode* threadsArr;
+    int numOfThreads;
+}threadPool;
 
 
 

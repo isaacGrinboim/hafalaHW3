@@ -12,22 +12,21 @@
 //
 
 // HW3: Parse the new arguments too
-void getargs(int *port, int argc, char *argv[])
-{
-    if (argc < 2) {
-	fprintf(stderr, "Usage: %s <port>\n", argv[0]);
-	exit(1);
-    }
-    *port = atoi(argv[1]);
-}
+void getargs(int *port, int *numOfThreads, int *queueSize, char *overLoadHandlerAlg, int argc, char *argv[]);
 
+void threadPoolInit(threadPool *threadyPool, int numOfThreads);
 
-int main(int argc, char *argv[])
-{
-    int listenfd, connfd, port, clientlen;
+void *threadCodeToRun(void *arguments);
+
+int main(int argc, char *argv[]) {
+    char *overloadHandlerAlg;
+    int listenfd, connfd, port, clientlen, numOfThreads, queueSize;
+    threadPool *threadypool;
+    threadPoolInit(threadypool, numOfThreads);
+
     struct sockaddr_in clientaddr;
 
-    getargs(&port, argc, argv);
+    getargs(&port, &numOfThreads, &queueSize, overloadHandlerAlg, argc, argv);
 
     // 
     // HW3: Create some threads...
@@ -35,20 +34,60 @@ int main(int argc, char *argv[])
 
     listenfd = Open_listenfd(port);
     while (1) {
-	clientlen = sizeof(clientaddr);
-	connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
+        clientlen = sizeof(clientaddr);
+        connfd = Accept(listenfd, (SA *) &clientaddr, (socklen_t *) &clientlen);
 
-	// 
-	// HW3: In general, don't handle the request in the main thread.
-	// Save the relevant info in a buffer and have one of the worker threads 
-	// do the work. 
-	// 
-	requestHandle(connfd);
+        //
+        // HW3: In general, don't handle the request in the main thread.
+        // Save the relevant info in a buffer and have one of the worker threads
+        // do the work.
+        //
+        requestHandle(connfd);
 
-	Close(connfd);
+        Close(connfd);
     }
-
 }
+
+void getargs(int *port, int *numOfThreads, int *queueSize, char *overLoadHandlerAlg, int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <port>\n", argv[0]);
+        exit(1);
+    }
+    *port = atoi(argv[1]);
+    *numOfThreads = atoi(argv[2]);
+    *queueSize = atoi(argv[3]);
+    overLoadHandlerAlg = argv[4];
+}
+
+void threadPoolInit(threadPool *threadypool, int numOfThreads) {
+    if (numOfThreads < 1) {
+        app_error("invalid size of threads");
+    }
+    threadypool->threadsArr = NULL;
+    threadypool->threadsArr = malloc(numOfThreads * sizeof(threadNode));
+    if (threadypool->threadsArr == NULL) {
+        unix_error("malloc failed");
+    }
+    threadypool->numOfThreads = numOfThreads;
+    for (int i = 0; i < numOfThreads; ++i) {
+        threadypool->threadsArr[i].numOfRequests = 0;
+        threadypool->threadsArr[i].threadId = i;
+        int worked = 0;
+        worked = pthread_create(&(threadypool->threadsArr[i].thready), NULL, &threadCodeToRun,
+                                (void *) &(threadypool->threadsArr[i].thready));//Todo:implement threadCodeToRun
+        if (worked != 0) {
+            unix_error("failed to create thread");
+        }
+    }
+}
+
+void *threadCodeToRun(void *arguments) {
+
+    while (!0) {
+        //pthread_mutex_lock(&) - lock queue;
+    }
+}
+
 
 
     
