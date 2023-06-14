@@ -1,5 +1,5 @@
 #include "segel.h"
-
+#define NOT_USED_TIME_ZONE NULL
 /************************** 
  * Error-handling functions
  **************************/
@@ -565,4 +565,38 @@ int Open_listenfd(int port)
     return rc;
 }
 
+/*****************************
+ * Implementation of structs
+ *****************************/
+void InitRequestQueue(requestQueue *queue,int maxSize){
+    queue->maxSize = maxSize;
+    queue->first = NULL;
+    queue->last = NULL;
+    queue->numOfRequests = 0;
+}
 
+void pushRequestQueue(requestQueue *queue, int connfd){
+    if(queue->numOfRequests == queue->maxSize){
+        //Todo: add schedalg;
+    }
+    request *requestToAdd = malloc(sizeof(request));
+    requestToAdd->connfd = connfd;
+    gettimeofday(&requestToAdd->arrival,NOT_USED_TIME_ZONE);
+
+    requestNode *nodeToAdd = malloc(sizeof(requestNode));
+    nodeToAdd->req = requestToAdd;
+    nodeToAdd->next = NULL;
+    nodeToAdd->prev = NULL;
+
+    if(queue->numOfRequests == 0){
+        queue->first = nodeToAdd;
+        queue->last = nodeToAdd;
+        ++queue->numOfRequests;
+    }
+    else{
+        queue->last->next = nodeToAdd;
+        nodeToAdd->prev = queue->last;
+        queue->last = nodeToAdd;
+    }
+
+}

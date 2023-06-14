@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "segel.h"
 #include "request.h"
 
@@ -18,15 +19,34 @@ void threadPoolInit(threadPool *threadyPool, int numOfThreads);
 
 void *threadCodeToRun(void *arguments);
 
+void test(){
+    requestQueue queue;
+    InitRequestQueue(&queue,10);
+    for(int i = 500; i < 510; ++i){
+        pushRequestQueue(&queue,i);
+    }
+
+    requestNode * check = queue.first;
+    int i = 500;
+    while(check){
+        assert(check->req->connfd == i);
+        check = check->next;
+        ++i;
+    }
+    assert(i == 509);
+}
+
 int main(int argc, char *argv[]) {
-    char *overloadHandlerAlg;
+    test();
+    char *overloadHandlerAlg = NULL;
     int listenfd, connfd, port, clientlen, numOfThreads, queueSize;
-    threadPool *threadypool;
+    getargs(&port, &numOfThreads, &queueSize, overloadHandlerAlg, argc, argv);
+    threadPool *threadypool = NULL;
     threadPoolInit(threadypool, numOfThreads);
 
     struct sockaddr_in clientaddr;
 
-    getargs(&port, &numOfThreads, &queueSize, overloadHandlerAlg, argc, argv);
+
 
     // 
     // HW3: Create some threads...
