@@ -36,7 +36,7 @@ void test(char* schedAlg,requestQueue* queue){
 void testPop(requestQueue* queue){
     for(int i = 500; i < 510; ++i){
         popRequestQueue(queue);
-        assert(queue->first->req->connfd == i-1);
+        assert(queue->first->req->connfd == i);
     }
     assert(queue->numOfRequests == 0);
 }
