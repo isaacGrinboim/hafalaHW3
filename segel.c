@@ -575,9 +575,9 @@ void InitRequestQueue(requestQueue *queue,int maxSize){
     queue->numOfRequests = 0;
 }
 
-void pushRequestQueue(requestQueue *queue, int connfd){
+void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg){
     if(queue->numOfRequests == queue->maxSize){
-        //Todo: add schedalg;
+        //Todo: add overLoadHandlerAlg;
     }
     request *requestToAdd = malloc(sizeof(request));
     requestToAdd->connfd = connfd;
@@ -598,5 +598,16 @@ void pushRequestQueue(requestQueue *queue, int connfd){
         nodeToAdd->prev = queue->last;
         queue->last = nodeToAdd;
     }
+
+}
+
+void popRequestQueue(requestQueue *queue){
+    if(queue->numOfRequests == 0){
+        //Todo:return error schedalg
+    }
+    requestNode* toDel = queue->first;
+    queue->first = queue->first->next;
+    queue->first->next = NULL;
+    free(toDel);
 
 }

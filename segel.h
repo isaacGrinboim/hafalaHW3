@@ -154,8 +154,8 @@ typedef struct m_threads{
 }threadPool;
 
 void InitRequestQueue(requestQueue *queue,int maxSize);
-void pushRequestQueue(requestQueue *queue, int connfd);
-
+void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg);
+void popRequestQueue(requestQueue *queue);
 
 
 #endif /* __CSAPP_H__ */
