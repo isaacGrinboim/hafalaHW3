@@ -45,16 +45,14 @@ int main(int argc, char *argv[]) {
     int listenfd, connfd, port, clientlen, numOfThreads, queueSize;
     getargs(&port, &numOfThreads, &queueSize, overloadHandlerAlg, argc, argv);
     requestQueue* queue = NULL;
-    InitRequestQueue(queue,10);
-    test(overloadHandlerAlg,queue);
-    testPop(queue);
     threadPool *threadypool = NULL;
     threadPoolInit(threadypool, numOfThreads);
+    InitRequestQueue(queue,queueSize);
+
+
+
 
     struct sockaddr_in clientaddr;
-
-
-
     // 
     // HW3: Create some threads...
     //
@@ -63,6 +61,8 @@ int main(int argc, char *argv[]) {
     while (1) {
         clientlen = sizeof(clientaddr);
         connfd = Accept(listenfd, (SA *) &clientaddr, (socklen_t *) &clientlen);
+        pushRequestQueue(queue,connfd,overloadHandlerAlg);
+
 
         //
         // HW3: In general, don't handle the request in the main thread.
@@ -73,6 +73,7 @@ int main(int argc, char *argv[]) {
 
         Close(connfd);
     }
+
 }
 
 void getargs(int *port, int *numOfThreads, int *queueSize, char *overLoadHandlerAlg, int argc, char *argv[]) {
@@ -109,7 +110,7 @@ void threadPoolInit(threadPool *threadypool, int numOfThreads) {
 }
 
 void *threadCodeToRun(void *arguments) {
-
+    
     while (!0) {
         //pthread_mutex_lock(&) - lock queue;
     }
