@@ -577,7 +577,16 @@ void InitRequestQueue(requestQueue *queue,int maxSize){
 
 void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg){
     if(queue->numOfRequests == queue->maxSize){
-        //Todo: add overLoadHandlerAlg;
+        if(!strcmp(overLoadHandlerAlg, "dh")){
+            requestNode* tempNode = queue->first;
+            queue->first = queue->first->next;
+            queue->first->prev = NULL;
+            free(tempNode);
+            --queue->numOfRequests;
+        }
+        else if(!strcmp(overLoadHandlerAlg, "drop_random")){
+            //Todo: Bonus;
+        }
     }
     request *requestToAdd = malloc(sizeof(request));
     requestToAdd->connfd = connfd;

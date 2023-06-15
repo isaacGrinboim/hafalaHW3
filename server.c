@@ -19,14 +19,12 @@ void threadPoolInit(threadPool *threadyPool, int numOfThreads);
 
 void *threadCodeToRun(void *arguments);
 
-void test(){
-    requestQueue queue;
-    InitRequestQueue(&queue,10);
+void test(char* schedAlg,requestQueue* queue){
     for(int i = 500; i < 510; ++i){
-        pushRequestQueue(&queue,i);
+        pushRequestQueue(&queue,i,schedAlg);
     }
 
-    requestNode * check = queue.first;
+    requestNode * check = queue->first;
     int i = 500;
     while(check){
         assert(check->req->connfd == i);
@@ -35,12 +33,21 @@ void test(){
     }
     assert(i == 509);
 }
-
+void testPop(requestQueue* queue){
+    for(int i = 500; i < 510; ++i){
+        popRequestQueue(queue);
+        assert(queue->first->req->connfd == i-1);
+    }
+    assert(queue->numOfRequests == 0);
+}
 int main(int argc, char *argv[]) {
-    test();
     char *overloadHandlerAlg = NULL;
     int listenfd, connfd, port, clientlen, numOfThreads, queueSize;
     getargs(&port, &numOfThreads, &queueSize, overloadHandlerAlg, argc, argv);
+    requestQueue* queue = NULL;
+    InitRequestQueue(queue,10);
+    test(overloadHandlerAlg,queue);
+    testPop(queue);
     threadPool *threadypool = NULL;
     threadPoolInit(threadypool, numOfThreads);
 
