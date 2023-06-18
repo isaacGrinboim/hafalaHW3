@@ -600,23 +600,24 @@ void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg
     if(queue->numOfRequests == 0){
         queue->first = nodeToAdd;
         queue->last = nodeToAdd;
-        ++queue->numOfRequests;
     }
     else{
         queue->last->next = nodeToAdd;
         nodeToAdd->prev = queue->last;
         queue->last = nodeToAdd;
     }
+    ++queue->numOfRequests;
 
 }
 
-void popRequestQueue(requestQueue *queue){
+request* popRequestQueue(requestQueue *queue){
     if(queue->numOfRequests == 0){
         //Todo:return error schedalg
     }
-    requestNode* toDel = queue->first;
+    requestNode* toret = queue->first;
     queue->first = queue->first->next;
     queue->first->next = NULL;
-    free(toDel);
+    queue->numOfRequests--;
+    return toret->req;
 
 }

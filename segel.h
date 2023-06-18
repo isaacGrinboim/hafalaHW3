@@ -151,11 +151,12 @@ typedef struct m_thread_node{
 typedef struct m_threads{
     threadNode* threadsArr;
     int numOfThreads;
+    int threadRunning;
 }threadPool;
 
 void InitRequestQueue(requestQueue *queue,int maxSize);
 void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg);
-void popRequestQueue(requestQueue *queue);
+request* popRequestQueue(requestQueue *queue);
 
 
 #endif /* __CSAPP_H__ */

@@ -1,7 +1,7 @@
 #include <assert.h>
 #include "segel.h"
 #include "request.h"
-
+#define NONUSED_ATTR NULL
 // 
 // server.c: A very, very simple web server
 //
@@ -19,37 +19,30 @@ void threadPoolInit(threadPool *threadyPool, int numOfThreads);
 
 void *threadCodeToRun(void *arguments);
 
-void test(char* schedAlg,requestQueue* queue){
-    for(int i = 500; i < 510; ++i){
-        pushRequestQueue(&queue,i,schedAlg);
-    }
+requestQueue queue;
 
-    requestNode * check = queue->first;
-    int i = 500;
-    while(check){
-        assert(check->req->connfd == i);
-        check = check->next;
-        ++i;
-    }
-    assert(i == 509);
-}
-void testPop(requestQueue* queue){
-    for(int i = 500; i < 510; ++i){
-        popRequestQueue(queue);
-        assert(queue->first->req->connfd == i);
-    }
-    assert(queue->numOfRequests == 0);
-}
+pthread_cond_t fullQueue;
+
+pthread_cond_t emptyQueue;
+
+pthread_mutex_t lockQueue;
+
 int main(int argc, char *argv[]) {
     char *overloadHandlerAlg = NULL;
     int listenfd, connfd, port, clientlen, numOfThreads, queueSize;
     getargs(&port, &numOfThreads, &queueSize, overloadHandlerAlg, argc, argv);
-    requestQueue* queue = NULL;
     threadPool *threadypool = NULL;
     threadPoolInit(threadypool, numOfThreads);
-    InitRequestQueue(queue,queueSize);
-
-
+    InitRequestQueue(&queue, queueSize);
+    int worked = 0;
+    worked = pthread_cond_init(&fullQueue, NONUSED_ATTR);
+    if(worked!=0){
+        //Todo: add error
+    }
+    worked = pthread_cond_init(&emptyQueue, NONUSED_ATTR);
+    if(worked!=0){
+        //Todo:: add error
+    }
 
 
     struct sockaddr_in clientaddr;
@@ -61,7 +54,18 @@ int main(int argc, char *argv[]) {
     while (1) {
         clientlen = sizeof(clientaddr);
         connfd = Accept(listenfd, (SA *) &clientaddr, (socklen_t *) &clientlen);
-        pushRequestQueue(queue,connfd,overloadHandlerAlg);
+        worked = pthread_mutex_lock(&lockQueue);
+        if(worked != 0){
+            //Todo: add error;
+        }
+        while(queue.numOfRequests == queue.maxSize){
+            pthread_cond_wait(&fullQueue, &lockQueue);
+        }
+        pushRequestQueue(&queue,connfd,overloadHandlerAlg);
+        pthread_cond_signal(&emptyQueue);
+        pthread_mutex_unlock(&lockQueue);
+
+
 
 
         //
@@ -69,7 +73,7 @@ int main(int argc, char *argv[]) {
         // Save the relevant info in a buffer and have one of the worker threads
         // do the work.
         //
-        requestHandle(connfd);
+        //requestHandle(connfd);
 
         Close(connfd);
     }
@@ -91,6 +95,7 @@ void threadPoolInit(threadPool *threadypool, int numOfThreads) {
     if (numOfThreads < 1) {
         app_error("invalid size of threads");
     }
+    threadypool->threadRunning = 0;
     threadypool->threadsArr = NULL;
     threadypool->threadsArr = malloc(numOfThreads * sizeof(threadNode));
     if (threadypool->threadsArr == NULL) {
@@ -110,10 +115,29 @@ void threadPoolInit(threadPool *threadypool, int numOfThreads) {
 }
 
 void *threadCodeToRun(void *arguments) {
-    
+    int worked = 0;
+    request* requestToWork;
     while (!0) {
-        //pthread_mutex_lock(&) - lock queue;
+        worked = pthread_mutex_lock(&lockQueue);
+        if(worked != 0){
+            //Todo: add error;
+        }
+        while(queue.numOfRequests == 0){
+            worked = pthread_cond_wait(&emptyQueue,&lockQueue);
+            if(worked!=0){
+                //Todo: add error;
+            }
+        }
+        requestToWork = popRequestQueue(&queue);
+        pthread_cond_signal(&fullQueue);
+        requestHandle(requestToWork->connfd);
+        worked = pthread_mutex_unlock(&lockQueue);
+        if(worked!=0){
+            //Todo: add error;
+        }
+        free(requestToWork);
     }
+    return NULL;
 }
 
 
