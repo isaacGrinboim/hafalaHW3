@@ -573,6 +573,7 @@ void InitRequestQueue(requestQueue *queue,int maxSize){
     queue->first = NULL;
     queue->last = NULL;
     queue->numOfRequests = 0;
+    queue->dynamicMax = -1;
 }
 
 void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg){

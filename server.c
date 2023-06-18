@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
                 pthread_cond_wait(&fullQueue, &lockQueue);
             }
         }
-        else if(strcmp(overloadHandlerAlg, "dt") == 0){
+        else if(strcmp(overloadHandlerAlg, "dt") == 0 || (queue.maxSize == queue.dynamicMax)&& strcmp(overloadHandlerAlg, "dynamic")){
             Close(connfd);
             pthread_mutex_unlock(&lockQueue);
             continue;
@@ -87,6 +87,12 @@ int main(int argc, char *argv[]) {
            while(queue.numOfRequests != 0){
                pthread_cond_wait(&notEmpty, &lockQueue);
            }
+       }
+       else if(strcmp(overloadHandlerAlg, "dynamic") == 0){
+            Close(connfd);
+            queue.maxSize++;
+            pthread_mutex_unlock(&lockQueue);
+            continue;
        }
         pushRequestQueue(&queue,connfd,overloadHandlerAlg);
         pthread_cond_signal(&emptyQueue);
@@ -112,16 +118,14 @@ void getargs(int *port, int *numOfThreads, int *queueSize, char *overLoadHandler
         fprintf(stderr, "Usage: %s <port>\n", argv[0]);
         exit(1);
     }
-    printf("after check\n");
+    if(argc == 6){
+        queue.dynamicMax = argv[5];
+    }
     *port = atoi(argv[1]);
-    printf("here1");
     *numOfThreads = atoi(argv[2]);
-    printf("here2");
     *queueSize = atoi(argv[3]);
-    printf("here3");
     overLoadHandlerAlg = argv[4];
-    printf("here4");
-    printf("argc: %d\n", argc);
+
 }
 
 void threadPoolInit(threadPool *threadypool, int numOfThreads) {
@@ -179,6 +183,8 @@ void *threadCodeToRun(void *arguments) {
     }
     return NULL;
 }
+
+
 
 
 
