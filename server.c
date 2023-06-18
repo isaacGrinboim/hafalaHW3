@@ -48,7 +48,6 @@ int main(int argc, char *argv[]) {
     if(worked!=0){
         //Todo:: add error
     }
-//sss
 
     struct sockaddr_in clientaddr;
     // 
