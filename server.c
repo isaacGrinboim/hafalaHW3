@@ -23,6 +23,8 @@ requestQueue queue;
 
 pthread_cond_t fullQueue;
 
+pthread_cond_t notEmpty;
+
 pthread_cond_t emptyQueue;
 
 pthread_mutex_t lockQueue;
@@ -62,9 +64,30 @@ int main(int argc, char *argv[]) {
         if(worked != 0){
             //Todo: add error;
         }
-        while(queue.numOfRequests == queue.maxSize){
-            pthread_cond_wait(&fullQueue, &lockQueue);
+        if(queue.numOfRequests < queue.maxSize){
+            pushRequestQueue(&queue, connfd, overloadHandlerAlg);
+            pthread_cond_signal(&emptyQueue);
+            pthread_mutex_unlock(&lockQueue);
+            continue;
         }
+        if(strcmp(overloadHandlerAlg, "block") == 0){
+            while(queue.numOfRequests == queue.maxSize){
+                pthread_cond_wait(&fullQueue, &lockQueue);
+            }
+        }
+        else if(strcmp(overloadHandlerAlg, "dt") == 0){
+            Close(connfd);
+            pthread_mutex_unlock(&lockQueue);
+            continue;
+        }
+        else if(strcmp(overloadHandlerAlg, "dh") == 0){
+            popRequestQueue(&queue);
+        }
+       else if(strcmp(overloadHandlerAlg, "bf") == 0){
+           while(queue.numOfRequests != 0){
+               pthread_cond_wait(&notEmpty, &lockQueue);
+           }
+       }
         pushRequestQueue(&queue,connfd,overloadHandlerAlg);
         pthread_cond_signal(&emptyQueue);
         pthread_mutex_unlock(&lockQueue);
@@ -143,6 +166,9 @@ void *threadCodeToRun(void *arguments) {
             }
         }
         requestToWork = popRequestQueue(&queue);
+        if(queue.numOfRequests == 0){
+            pthread_cond_signal(&notEmpty);
+        }
         pthread_cond_signal(&fullQueue);
         requestHandle(requestToWork->connfd);
         worked = pthread_mutex_unlock(&lockQueue);
