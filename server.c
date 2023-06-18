@@ -31,8 +31,13 @@ int main(int argc, char *argv[]) {
     char *overloadHandlerAlg = NULL;
     int listenfd, connfd, port, clientlen, numOfThreads, queueSize;
     getargs(&port, &numOfThreads, &queueSize, overloadHandlerAlg, argc, argv);
-    threadPool *threadypool = NULL;
-    threadPoolInit(threadypool, numOfThreads);
+    printf("argc count is: %d\n", argc);
+   
+    threadPool threadypool;
+    
+    
+    
+    threadPoolInit(&threadypool, numOfThreads);
     InitRequestQueue(&queue, queueSize);
     int worked = 0;
     worked = pthread_cond_init(&fullQueue, NONUSED_ATTR);
@@ -85,17 +90,27 @@ void getargs(int *port, int *numOfThreads, int *queueSize, char *overLoadHandler
         fprintf(stderr, "Usage: %s <port>\n", argv[0]);
         exit(1);
     }
+    printf("after check\n");
     *port = atoi(argv[1]);
+    printf("here1");
     *numOfThreads = atoi(argv[2]);
+    printf("here2");
     *queueSize = atoi(argv[3]);
+    printf("here3");
     overLoadHandlerAlg = argv[4];
+    printf("here4");
+    printf("argc: %d\n", argc);
 }
 
 void threadPoolInit(threadPool *threadypool, int numOfThreads) {
     if (numOfThreads < 1) {
         app_error("invalid size of threads");
     }
+    printf("error here?\n");
+
     threadypool->threadRunning = 0;
+	printf("after\n");
+
     threadypool->threadsArr = NULL;
     threadypool->threadsArr = malloc(numOfThreads * sizeof(threadNode));
     if (threadypool->threadsArr == NULL) {
