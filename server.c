@@ -29,16 +29,16 @@ pthread_cond_t emptyQueue;
 
 pthread_mutex_t lockQueue;
 
+threadPool threadypool;
+
+threadNode* myNode(pthread_t myself);
+
 int main(int argc, char *argv[]) {
     char *overloadHandlerAlg = NULL;
     int listenfd, connfd, port, clientlen, numOfThreads, queueSize;
     getargs(&port, &numOfThreads, &queueSize, overloadHandlerAlg, argc, argv);
-    printf("argc count is: %d\n", argc);
-   
-    threadPool threadypool;
-    
-    
-    
+    struct timeval arrivalTime;
+
     threadPoolInit(&threadypool, numOfThreads);
     InitRequestQueue(&queue, queueSize);
     int worked = 0;
@@ -60,12 +60,13 @@ int main(int argc, char *argv[]) {
     while (1) {
         clientlen = sizeof(clientaddr);
         connfd = Accept(listenfd, (SA *) &clientaddr, (socklen_t *) &clientlen);
+        gettimeofday(&arrivalTime, NULL);
         worked = pthread_mutex_lock(&lockQueue);
         if(worked != 0){
             //Todo: add error;
         }
         if(queue.numOfRequests < queue.maxSize){
-            pushRequestQueue(&queue, connfd, overloadHandlerAlg);
+            pushRequestQueue(&queue, connfd, overloadHandlerAlg, &arrivalTime);
             pthread_cond_signal(&emptyQueue);
             pthread_mutex_unlock(&lockQueue);
             continue;
@@ -94,7 +95,7 @@ int main(int argc, char *argv[]) {
             pthread_mutex_unlock(&lockQueue);
             continue;
        }
-        pushRequestQueue(&queue,connfd,overloadHandlerAlg);
+        pushRequestQueue(&queue,connfd,overloadHandlerAlg, &arrivalTime);
         pthread_cond_signal(&emptyQueue);
         pthread_mutex_unlock(&lockQueue);
 
@@ -119,12 +120,12 @@ void getargs(int *port, int *numOfThreads, int *queueSize, char *overLoadHandler
         exit(1);
     }
     if(argc == 6){
-        queue.dynamicMax = argv[5];
+        queue.dynamicMax = atoi(argv[5]);
     }
     *port = atoi(argv[1]);
     *numOfThreads = atoi(argv[2]);
     *queueSize = atoi(argv[3]);
-    overLoadHandlerAlg = argv[4];
+    overLoadHandlerAlg = atoi(argv[4]);
 
 }
 
@@ -146,6 +147,9 @@ void threadPoolInit(threadPool *threadypool, int numOfThreads) {
     for (int i = 0; i < numOfThreads; ++i) {
         threadypool->threadsArr[i].numOfRequests = 0;
         threadypool->threadsArr[i].threadId = i;
+        threadypool->threadsArr[i].totalRequestsHandled = 0;
+        threadypool->threadsArr[i].staticRequestHandled = 0;
+        threadypool->threadsArr[i].dynamicRequesrHandled = 0;
         int worked = 0;
         worked = pthread_create(&(threadypool->threadsArr[i].thready), NULL, &threadCodeToRun,
                                 (void *) &(threadypool->threadsArr[i].thready));//Todo:implement threadCodeToRun
@@ -174,7 +178,11 @@ void *threadCodeToRun(void *arguments) {
             pthread_cond_signal(&notEmpty);
         }
         pthread_cond_signal(&fullQueue);
-        requestHandle(requestToWork->connfd);
+        struct timeval currentTime;
+        gettimeofday(&currentTime, NULL);
+
+        timersub(&currentTime, &(requestToWork->arrival), &(requestToWork->dispatch));
+        requestHandle(requestToWork->connfd, myNode(pthread_self()));
         worked = pthread_mutex_unlock(&lockQueue);
         if(worked!=0){
             //Todo: add error;
@@ -184,6 +192,14 @@ void *threadCodeToRun(void *arguments) {
     return NULL;
 }
 
+threadNode* myNode(pthread_t myself){
+    for(int i=0; i<threadypool.numOfThreads; ++i){
+        if(threadypool.threadsArr[i].thready == myself){
+            return &threadypool.threadsArr[i];
+        }
+    }
+    return NULL;
+}
 
 
 

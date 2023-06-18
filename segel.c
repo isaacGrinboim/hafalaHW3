@@ -576,7 +576,7 @@ void InitRequestQueue(requestQueue *queue,int maxSize){
     queue->dynamicMax = -1;
 }
 
-void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg){
+void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg, struct timeval* arrival){
     if(queue->numOfRequests == queue->maxSize){
         if(!strcmp(overLoadHandlerAlg, "dh")){
             requestNode* tempNode = queue->first;
@@ -591,7 +591,8 @@ void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg
     }
     request *requestToAdd = malloc(sizeof(request));
     requestToAdd->connfd = connfd;
-    gettimeofday(&requestToAdd->arrival,NOT_USED_TIME_ZONE);
+    requestToAdd->arrival = *arrival;
+    requestToAdd->dispatch.tv_sec = -1;
 
     requestNode *nodeToAdd = malloc(sizeof(requestNode));
     nodeToAdd->req = requestToAdd;

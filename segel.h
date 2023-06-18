@@ -127,6 +127,7 @@ int Open_listenfd(int port);
 typedef struct m_request{
 	// a way to identify request
 	struct timeval arrival;
+    struct timeval dispatch;
     int connfd;
 }request;
 
@@ -148,6 +149,9 @@ typedef struct m_thread_node{
     pthread_t thready;
     int numOfRequests;
     int threadId;
+    int totalRequestsHandled;
+    int staticRequestHandled;
+    int dynamicRequesrHandled;
 }threadNode;
 typedef struct m_threads{
     threadNode* threadsArr;
@@ -156,7 +160,7 @@ typedef struct m_threads{
 }threadPool;
 
 void InitRequestQueue(requestQueue *queue,int maxSize);
-void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg);
+void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg, struct timeval* arrival);
 request* popRequestQueue(requestQueue *queue);
 
 
