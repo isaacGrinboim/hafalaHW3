@@ -152,6 +152,7 @@ typedef struct m_thread_node{
     int totalRequestsHandled;
     int staticRequestHandled;
     int dynamicRequesrHandled;
+    request * workingOn;
 }threadNode;
 typedef struct m_threads{
     threadNode* threadsArr;
