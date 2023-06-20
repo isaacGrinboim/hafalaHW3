@@ -616,6 +616,11 @@ request* popRequestQueue(requestQueue *queue){
     if(queue->numOfRequests == 0){
         //Todo:return error schedalg
     }
+    if(queue->numOfRequests == 1){
+			requestNode* toret = queue->first;
+			queue->first = NULL;
+			return toret->req;
+	}
     requestNode* toret = queue->first;
     queue->first = queue->first->next;
     queue->first->next = NULL;

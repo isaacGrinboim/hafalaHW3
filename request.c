@@ -126,15 +126,15 @@ void requestServeDynamic(int fd, char *filename, char *cgiargs, threadNode* thre
     sprintf(buf, "%sStat-Thread-Dynamic:: %d\r\n\r\n", buf,thready->dynamicRequesrHandled);
 
     Rio_writen(fd, buf, strlen(buf));
-
-   if (Fork() == 0) {
+   int pid = Fork();	
+   if (pid == 0) {
       /* Child process */
       Setenv("QUERY_STRING", cgiargs, 1);
       /* When the CGI process writes to stdout, it will instead go to the socket */
       Dup2(fd, STDOUT_FILENO);
       Execve(filename, emptylist, environ);
    }
-   Wait(NULL);
+   WaitPid(pid, NULL, 2);
 }
 
 

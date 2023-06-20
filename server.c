@@ -36,19 +36,22 @@ threadNode* myNode(pthread_t myself);
 int requestsInProgress = 0;
 
 int main(int argc, char *argv[]) {
-    char *overloadHandlerAlg = NULL;
+    char *overloadHandlerAlg;
     int listenfd, connfd, port, clientlen, numOfThreads, queueSize;
     getargs(&port, &numOfThreads, &queueSize, overloadHandlerAlg, argc, argv);
     struct timeval arrivalTime;
 
     threadPoolInit(&threadypool, numOfThreads);
+   
     InitRequestQueue(&queue, queueSize);
     int worked = 0;
+    
     worked = pthread_cond_init(&fullQueue, NONUSED_ATTR);
     if(worked!=0){
         //Todo: add error
     }
     worked = pthread_cond_init(&emptyQueue, NONUSED_ATTR);
+    
     if(worked!=0){
         //Todo:: add error
     }
@@ -57,18 +60,26 @@ int main(int argc, char *argv[]) {
     // 
     // HW3: Create some threads...
     //
-
+	
     listenfd = Open_listenfd(port);
+    
     while (1) {
+		
         clientlen = sizeof(clientaddr);
+        printf("error here?\n");
         connfd = Accept(listenfd, (SA *) &clientaddr, (socklen_t *) &clientlen);
+        
         gettimeofday(&arrivalTime, NULL);
+        
         worked = pthread_mutex_lock(&lockQueue);
+        
         if(worked != 0){
             //Todo: add error;
         }
         if(queue.numOfRequests + requestsInProgress  < queue.maxSize){
+			
             pushRequestQueue(&queue, connfd, overloadHandlerAlg, &arrivalTime);
+            
             pthread_cond_signal(&emptyQueue);
             pthread_mutex_unlock(&lockQueue);
             continue;
@@ -104,6 +115,7 @@ int main(int argc, char *argv[]) {
 
 
 
+
         //
         // HW3: In general, don't handle the request in the main thread.
         // Save the relevant info in a buffer and have one of the worker threads
@@ -124,10 +136,12 @@ void getargs(int *port, int *numOfThreads, int *queueSize, char *overLoadHandler
     if(argc == 6){
         queue.dynamicMax = atoi(argv[5]);
     }
+    
     *port = atoi(argv[1]);
     *numOfThreads = atoi(argv[2]);
     *queueSize = atoi(argv[3]);
-    overLoadHandlerAlg = atoi(argv[4]);
+    overLoadHandlerAlg = argv[4];
+	 //strcpy(,);
 
 }
 
@@ -135,13 +149,15 @@ void threadPoolInit(threadPool *threadypool, int numOfThreads) {
     if (numOfThreads < 1) {
         app_error("invalid size of threads");
     }
-    printf("error here?\n");
+   
 
     threadypool->threadRunning = 0;
-	printf("after\n");
+
 
     threadypool->threadsArr = NULL;
+     
     threadypool->threadsArr = malloc(numOfThreads * sizeof(threadNode));
+    
     if (threadypool->threadsArr == NULL) {
         unix_error("malloc failed");
     }
@@ -165,6 +181,7 @@ void threadPoolInit(threadPool *threadypool, int numOfThreads) {
 void *threadCodeToRun(void *arguments) {
     int worked = 0;
     request* requestToWork;
+
     while (!0) {
         worked = pthread_mutex_lock(&lockQueue);
         if(worked != 0){
@@ -176,10 +193,13 @@ void *threadCodeToRun(void *arguments) {
                 //Todo: add error;
             }
         }
+        
         requestToWork = popRequestQueue(&queue);
+        
         if(queue.numOfRequests == 0){
             pthread_cond_signal(&notEmpty);
         }
+        worked = pthread_mutex_unlock(&lockQueue);
         pthread_cond_signal(&fullQueue);
         struct timeval currentTime;
         gettimeofday(&currentTime, NULL);
@@ -189,11 +209,14 @@ void *threadCodeToRun(void *arguments) {
         myNode(pthread_self())->workingOn = requestToWork;
         requestHandle(requestToWork->connfd, myNode(pthread_self()));
         requestsInProgress--;
-        worked = pthread_mutex_unlock(&lockQueue);
+        
+        free(requestToWork);
+				
+       
         if(worked!=0){
             //Todo: add error;
         }
-        free(requestToWork);
+        
     }
     return NULL;
 }
