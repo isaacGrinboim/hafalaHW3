@@ -66,29 +66,30 @@ int main(int argc, char *argv[]) {
     while (1) {
 		
         clientlen = sizeof(clientaddr);
-        printf("error here?\n");
+      //  printf("error here?\n");
         connfd = Accept(listenfd, (SA *) &clientaddr, (socklen_t *) &clientlen);
-        
         gettimeofday(&arrivalTime, NULL);
         
         worked = pthread_mutex_lock(&lockQueue);
-        
         if(worked != 0){
             //Todo: add error;
         }
+        
         if(queue.numOfRequests + requestsInProgress  < queue.maxSize){
-			
+
             pushRequestQueue(&queue, connfd, overloadHandlerAlg, &arrivalTime);
-            
+
             pthread_cond_signal(&emptyQueue);
+
             pthread_mutex_unlock(&lockQueue);
             continue;
         }
         if(strcmp(overloadHandlerAlg, "block") == 0){
-            while(queue.numOfRequests == queue.maxSize){
+            while(queue.numOfRequests + requestsInProgress == queue.maxSize){
                 pthread_cond_wait(&fullQueue, &lockQueue);
             }
         }
+        
         else if(strcmp(overloadHandlerAlg, "dt") == 0 || (queue.maxSize == queue.dynamicMax)&& strcmp(overloadHandlerAlg, "dynamic")){
             Close(connfd);
             pthread_mutex_unlock(&lockQueue);
@@ -206,6 +207,7 @@ void *threadCodeToRun(void *arguments) {
         timersub(&currentTime, &(requestToWork->arrival), &(requestToWork->dispatch));
         myNode(pthread_self())->workingOn = requestToWork;
         requestHandle(requestToWork->connfd, myNode(pthread_self()));
+        close(requestToWork->connfd);//change
         requestsInProgress--;
         
         free(requestToWork);
@@ -214,7 +216,6 @@ void *threadCodeToRun(void *arguments) {
         if(worked!=0){
             //Todo: add error;
         }
-        
     }
     return NULL;
 }
