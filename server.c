@@ -195,17 +195,15 @@ void *threadCodeToRun(void *arguments) {
         }
         
         requestToWork = popRequestQueue(&queue);
-        
+        requestsInProgress++;
+        struct timeval currentTime;
+        gettimeofday(&currentTime, NULL);
+        pthread_cond_signal(&fullQueue);
         if(queue.numOfRequests == 0){
             pthread_cond_signal(&notEmpty);
         }
         worked = pthread_mutex_unlock(&lockQueue);
-        pthread_cond_signal(&fullQueue);
-        struct timeval currentTime;
-        gettimeofday(&currentTime, NULL);
-
         timersub(&currentTime, &(requestToWork->arrival), &(requestToWork->dispatch));
-        requestsInProgress++;
         myNode(pthread_self())->workingOn = requestToWork;
         requestHandle(requestToWork->connfd, myNode(pthread_self()));
         requestsInProgress--;
