@@ -13,7 +13,7 @@
 //
 
 // HW3: Parse the new arguments too
-void getargs(int *port, int *numOfThreads, int *queueSize, char *overLoadHandlerAlg, int argc, char *argv[]);
+void getargs(int *port, int *numOfThreads, int *queueSize, char **overLoadHandlerAlg, int argc, char *argv[]);
 
 void threadPoolInit(threadPool *threadyPool, int numOfThreads);
 
@@ -36,9 +36,10 @@ threadNode* myNode(pthread_t myself);
 int requestsInProgress = 0;
 
 int main(int argc, char *argv[]) {
-    char *overloadHandlerAlg;
+    char* overloadHandlerAlg = malloc(strlen(argv[4]) * sizeof(char));
     int listenfd, connfd, port, clientlen, numOfThreads, queueSize;
-    getargs(&port, &numOfThreads, &queueSize, overloadHandlerAlg, argc, argv);
+    printf("before get args\n");
+    getargs(&port, &numOfThreads, &queueSize, &overloadHandlerAlg, argc, argv);
     struct timeval arrivalTime;
 
     threadPoolInit(&threadypool, numOfThreads);
@@ -67,16 +68,19 @@ int main(int argc, char *argv[]) {
 		
         clientlen = sizeof(clientaddr);
       //  printf("error here?\n");
+      //  printf("try to get connfd\n");
         connfd = Accept(listenfd, (SA *) &clientaddr, (socklen_t *) &clientlen);
+	//	printf("after get connfd\n");
+
         gettimeofday(&arrivalTime, NULL);
         
         worked = pthread_mutex_lock(&lockQueue);
         if(worked != 0){
             //Todo: add error;
         }
-        
+		//	printf("params: nums: %d _ %d _ %d\n", queue.numOfRequests ,requestsInProgress , queue.maxSize);
         if(queue.numOfRequests + requestsInProgress  < queue.maxSize){
-
+		//	printf("first time\n");
             pushRequestQueue(&queue, connfd, overloadHandlerAlg, &arrivalTime);
 
             pthread_cond_signal(&emptyQueue);
@@ -84,7 +88,9 @@ int main(int argc, char *argv[]) {
             pthread_mutex_unlock(&lockQueue);
             continue;
         }
+        //printf("overload: %s \n", overloadHandlerAlg);
         if(strcmp(overloadHandlerAlg, "block") == 0){
+			//printf("second time\n");
             while(queue.numOfRequests + requestsInProgress == queue.maxSize){
                 pthread_cond_wait(&fullQueue, &lockQueue);
             }
@@ -124,12 +130,12 @@ int main(int argc, char *argv[]) {
         //
         //requestHandle(connfd);
 
-        Close(connfd);
+       
     }
 
 }
 
-void getargs(int *port, int *numOfThreads, int *queueSize, char *overLoadHandlerAlg, int argc, char *argv[]) {
+void getargs(int *port, int *numOfThreads, int *queueSize, char **overLoadHandlerAlg, int argc, char *argv[]) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <port>\n", argv[0]);
         exit(1);
@@ -141,9 +147,7 @@ void getargs(int *port, int *numOfThreads, int *queueSize, char *overLoadHandler
     *port = atoi(argv[1]);
     *numOfThreads = atoi(argv[2]);
     *queueSize = atoi(argv[3]);
-    overLoadHandlerAlg = argv[4];
-	 //strcpy(,);
-
+    strcpy(*overLoadHandlerAlg, argv[4]);
 }
 
 void threadPoolInit(threadPool *threadypool, int numOfThreads) {
@@ -207,11 +211,18 @@ void *threadCodeToRun(void *arguments) {
         timersub(&currentTime, &(requestToWork->arrival), &(requestToWork->dispatch));
         myNode(pthread_self())->workingOn = requestToWork;
         requestHandle(requestToWork->connfd, myNode(pthread_self()));
-        close(requestToWork->connfd);//change
-        requestsInProgress--;
         
+        
+		close(requestToWork->connfd);//change made
+		
+		pthread_mutex_lock(&lockQueue);
+		//printf("i am thready i subtract now from requestsInProgress\n");
+        requestsInProgress--;
+        pthread_cond_signal(&fullQueue);
+        pthread_mutex_unlock(&lockQueue);
+
         free(requestToWork);
-				
+		//printf("afetr free\n");
        
         if(worked!=0){
             //Todo: add error;
