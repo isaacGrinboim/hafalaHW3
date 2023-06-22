@@ -21,20 +21,35 @@ void requestError(int fd, char *cause, char *errnum, char *shortmsg, char *longm
 
    // Write out the header information for this response
    sprintf(buf, "HTTP/1.0 %s %s\r\n", errnum, shortmsg);
-   sprintf(buf, "%sContent-Type: text/html\r\n", buf);
-   sprintf(buf, "%sContent-Length: %lu\r\n", buf, strlen(body));
-
+   Rio_writen(fd, buf, strlen(buf));
+   printf("%s", buf);
+   sprintf(buf, "Content-Type: text/html\r\n");
+   Rio_writen(fd, buf, strlen(buf));
+   printf("%s", buf);
+   sprintf(buf, "Content-Length: %lu\r\n",strlen(body));
+   Rio_writen(fd, buf, strlen(buf));
+   printf("%s", buf);
   //statistics:
-    sprintf(buf, "%sStat-Req-Arrival:: %lu.%06lu\r\n", buf, thready->workingOn->arrival.tv_sec ,thready->workingOn->arrival.tv_usec);
-    sprintf(buf, "%sStat-Req-Dispatch:: %lu.%06lu\r\n", buf, thready->workingOn->dispatch.tv_sec, thready->workingOn->dispatch.tv_usec);
-    sprintf(buf, "%sStat-Thread-Id:: %d\r\n", buf, thready->threadId);
-    sprintf(buf, "%sStat-Thread-Count:: %d\r\n", buf, thready->totalRequestsHandled);
-    sprintf(buf, "%sStat-Thread-Static:: %d\r\n", buf, thready->staticRequestHandled );
-    sprintf(buf, "%sStat-Thread-Dynamic:: %d\r\n\r\n", buf,thready->dynamicRequesrHandled);
+    sprintf(buf, "Stat-Req-Arrival:: %lu.%06lu\r\n", thready->workingOn->arrival.tv_sec ,thready->workingOn->arrival.tv_usec);
+       Rio_writen(fd, buf, strlen(buf));
+   printf("%s", buf);
+    sprintf(buf, "Stat-Req-Dispatch:: %lu.%06lu\r\n", thready->workingOn->dispatch.tv_sec, thready->workingOn->dispatch.tv_usec);
+       Rio_writen(fd, buf, strlen(buf));
+   printf("%s", buf);
+    sprintf(buf, "Stat-Thread-Id:: %d\r\n", thready->threadId);
+       Rio_writen(fd, buf, strlen(buf));
+   printf("%s", buf);
+    sprintf(buf, "Stat-Thread-Count:: %d\r\n", thready->totalRequestsHandled);
+       Rio_writen(fd, buf, strlen(buf));
+   printf("%s", buf);
+    sprintf(buf, "Stat-Thread-Static:: %d\r\n", thready->staticRequestHandled );
+       Rio_writen(fd, buf, strlen(buf));
+   printf("%s", buf);
+    sprintf(buf, "Stat-Thread-Dynamic:: %d\r\n\r\n",thready->dynamicRequesrHandled);
+       Rio_writen(fd, buf, strlen(buf));
+   printf("%s", buf);
 
    
-   Rio_writen(fd, buf, strlen(buf));
-   Rio_writen(fd, buf, strlen(buf));
 
    /*
    printf("%s", buf);
@@ -191,7 +206,10 @@ void requestHandle(int fd, threadNode* threadyNode)
    rio_t rio;
 
    Rio_readinitb(&rio, fd);
+   printf("beefore\n");
+   printf("fd: %d\n",fd);
    Rio_readlineb(&rio, buf, MAXLINE);
+   printf("after\n");
    sscanf(buf, "%s %s %s", method, uri, version);
 
    printf("%s %s %s\n", method, uri, version);

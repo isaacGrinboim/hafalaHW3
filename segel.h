@@ -143,6 +143,7 @@ typedef struct m_reqqueue{
 	requestNode *last;
 	int maxSize;
 	int numOfRequests;
+    int requestsInProgress;
     int dynamicMax;
 }requestQueue;
 typedef struct m_thread_node{
