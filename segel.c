@@ -593,7 +593,9 @@ void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg
 
     if(strcmp(overLoadHandlerAlg,"dh")==0 && (queue->numOfRequests + queue->requestsInProgress == queue->maxSize)){
         if(queue->numOfRequests == 0){return;}
-        popRequestQueue(queue);
+        request *req=popRequestQueue(queue);
+        Close(req->connfd);
+        free(req);
     }
     printf("push: connfd: %d \n", connfd);
     request *requestToAdd = malloc(sizeof(request));
