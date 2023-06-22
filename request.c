@@ -142,8 +142,8 @@ void requestServeDynamic(int fd, char *filename, char *cgiargs, threadNode* thre
       /* When the CGI process writes to stdout, it will instead go to the socket */
       Dup2(fd, STDOUT_FILENO);
       Execve(filename, emptylist, environ);
-   }
-   WaitPid(pid, NULL, 2);
+   }	
+   WaitPid(pid, NULL, 0);
 }
 
 

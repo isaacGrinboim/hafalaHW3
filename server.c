@@ -10,7 +10,7 @@
 //
 // Repeatedly handles HTTP requests sent to this port number.
 // Most of the work is done within routines written in request.c
-//
+// 
 
 // HW3: Parse the new arguments too
 void getargs(int *port, int *numOfThreads, int *queueSize, char **overLoadHandlerAlg, int argc, char *argv[]);
@@ -18,6 +18,8 @@ void getargs(int *port, int *numOfThreads, int *queueSize, char **overLoadHandle
 void threadPoolInit(threadPool *threadyPool, int numOfThreads);
 
 void *threadCodeToRun(void *arguments);
+
+char* overloadHandlerAlg;
 
 requestQueue queue;
 
@@ -36,9 +38,9 @@ threadNode* myNode(pthread_t myself);
 int requestsInProgress = 0;
 
 int main(int argc, char *argv[]) {
-    char* overloadHandlerAlg = malloc(strlen(argv[4]) * sizeof(char));
+    overloadHandlerAlg = malloc((strlen(argv[4])+1) * sizeof(char));
     int listenfd, connfd, port, clientlen, numOfThreads, queueSize;
-    printf("before get args\n");
+    //printf("before get args\n");
     getargs(&port, &numOfThreads, &queueSize, &overloadHandlerAlg, argc, argv);
     struct timeval arrivalTime;
 
@@ -46,6 +48,8 @@ int main(int argc, char *argv[]) {
    
     InitRequestQueue(&queue, queueSize);
     int worked = 0;
+    
+    pthread_mutex_init(&lockQueue,NONUSED_ATTR);
     
     worked = pthread_cond_init(&fullQueue, NONUSED_ATTR);
     if(worked!=0){
@@ -82,32 +86,40 @@ int main(int argc, char *argv[]) {
         if(queue.numOfRequests + requestsInProgress  < queue.maxSize){
 		//	printf("first time\n");
             pushRequestQueue(&queue, connfd, overloadHandlerAlg, &arrivalTime);
-
             pthread_cond_signal(&emptyQueue);
-
+			printf("inserted to end of queue (no drop needed)\n");
             pthread_mutex_unlock(&lockQueue);
             continue;
         }
         //printf("overload: %s \n", overloadHandlerAlg);
         if(strcmp(overloadHandlerAlg, "block") == 0){
 			//printf("second time\n");
+			//TODO: check if this logic can cause deadlock.
             while(queue.numOfRequests + requestsInProgress == queue.maxSize){
                 pthread_cond_wait(&fullQueue, &lockQueue);
             }
         }
         
-        else if(strcmp(overloadHandlerAlg, "dt") == 0 || (queue.maxSize == queue.dynamicMax)&& strcmp(overloadHandlerAlg, "dynamic")){
+        else if(queue.numOfRequests == 0 || strcmp(overloadHandlerAlg, "dt") == 0 || (queue.maxSize == queue.dynamicMax)&& strcmp(overloadHandlerAlg, "dynamic")){
             Close(connfd);
             pthread_mutex_unlock(&lockQueue);
             continue;
         }
         else if(strcmp(overloadHandlerAlg, "dh") == 0){
-            popRequestQueue(&queue);
+			if(queue.numOfRequests == 0){
+				Close(connfd);
+				pthread_mutex_unlock(&lockQueue);
+				continue;
+			}
+			popRequestQueue(&queue);
         }
        else if(strcmp(overloadHandlerAlg, "bf") == 0){
-           while(queue.numOfRequests != 0){
+           while(queue.numOfRequests + requestsInProgress != 0){
                pthread_cond_wait(&notEmpty, &lockQueue);
            }
+           Close(connfd);
+           pthread_mutex_unlock(&lockQueue);
+           continue;
        }
        else if(strcmp(overloadHandlerAlg, "dynamic") == 0){
             Close(connfd);
@@ -117,11 +129,9 @@ int main(int argc, char *argv[]) {
        }
         pushRequestQueue(&queue,connfd,overloadHandlerAlg, &arrivalTime);
         pthread_cond_signal(&emptyQueue);
+        printf("inserted to end of queue (drop required)\n");
         pthread_mutex_unlock(&lockQueue);
-
-
-
-
+		
 
         //
         // HW3: In general, don't handle the request in the main thread.
@@ -176,7 +186,7 @@ void threadPoolInit(threadPool *threadypool, int numOfThreads) {
         threadypool->threadsArr[i].workingOn = NULL;
         int worked = 0;
         worked = pthread_create(&(threadypool->threadsArr[i].thready), NULL, &threadCodeToRun,
-                                (void *) &(threadypool->threadsArr[i].thready));//Todo:implement threadCodeToRun
+                                (void *) &(threadypool->threadsArr[i]));//Todo:implement threadCodeToRun
         if (worked != 0) {
             unix_error("failed to create thread");
         }
@@ -184,9 +194,9 @@ void threadPoolInit(threadPool *threadypool, int numOfThreads) {
 }
 
 void *threadCodeToRun(void *arguments) {
+	threadNode* node = (threadNode*)arguments;
     int worked = 0;
     request* requestToWork;
-
     while (!0) {
         worked = pthread_mutex_lock(&lockQueue);
         if(worked != 0){
@@ -203,25 +213,35 @@ void *threadCodeToRun(void *arguments) {
         requestsInProgress++;
         struct timeval currentTime;
         gettimeofday(&currentTime, NULL);
-        pthread_cond_signal(&fullQueue);
-        if(queue.numOfRequests == 0){
-            pthread_cond_signal(&notEmpty);
-        }
+       // pthread_cond_signal(&fullQueue);             _____________ I THINK IS NOT CORRECT
         worked = pthread_mutex_unlock(&lockQueue);
+      //  printf("node: %d\n", node->thready);
+       // printf("myself: %d\n", myNode(pthread_self())->thready);
+        //printf("boolean value: %d\n", (node == myNode(pthread_self())));
         timersub(&currentTime, &(requestToWork->arrival), &(requestToWork->dispatch));
         myNode(pthread_self())->workingOn = requestToWork;
-        requestHandle(requestToWork->connfd, myNode(pthread_self()));
+        requestHandle(requestToWork->connfd, node);//myNode(pthread_self()));
         
         
-		close(requestToWork->connfd);//change made
+		Close(requestToWork->connfd);//change made
+		free(requestToWork);
 		
 		pthread_mutex_lock(&lockQueue);
 		//printf("i am thready i subtract now from requestsInProgress\n");
         requestsInProgress--;
-        pthread_cond_signal(&fullQueue);
+        printf("finished handling request\n");
+        if(queue.numOfRequests + requestsInProgress == 0){
+            pthread_cond_signal(&notEmpty);
+        }
+        if(strcmp(overloadHandlerAlg, "block") == 0 && queue.numOfRequests + requestsInProgress == (queue.maxSize - 1)){
+			pthread_cond_signal(&fullQueue);
+		}
+       
+        
+        
         pthread_mutex_unlock(&lockQueue);
 
-        free(requestToWork);
+        
 		//printf("afetr free\n");
        
         if(worked!=0){
@@ -242,8 +262,3 @@ threadNode* myNode(pthread_t myself){
 
 
 
-
-    
-
-
- 
