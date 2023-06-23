@@ -85,7 +85,7 @@ SINGLE_FILES = {'/home.html': [True, STATIC_OUTPUT_CONTENT, generate_static_head
 
 @pytest.mark.parametrize("policy, threads, num_clients, queue_size, times, files",
                          [
-                             # ("block", 1,  25, 30, 20, SINGLE_FILES),
+                             ("block", 1,  25, 30, 20, SINGLE_FILES),
                              ("dh", 1,  25, 30, 20, SINGLE_FILES),
                              ("dt", 1,  25, 30, 20, SINGLE_FILES),
                             #  ("random", 1,  25, 30, 20, SINGLE_FILES),

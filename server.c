@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
         if (strcmp(overloadHandlerAlg, "block") == 0) {
-            while (queue.numOfRequests + queue.requestsInProgress >= queue.maxSize) {
+            while (queue.numOfRequests + queue.requestsInProgress  >= queue.maxSize) {
                 pthread_cond_wait(&fullQueue, &lockQueue);
             }
             
