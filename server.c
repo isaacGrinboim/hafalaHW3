@@ -79,9 +79,8 @@ int main(int argc, char *argv[]) {
             while (queue.numOfRequests + queue.requestsInProgress >= queue.maxSize) {
                 pthread_cond_wait(&fullQueue, &lockQueue);
             }
-            if (queue.numOfRequests + queue.requestsInProgress < queue.maxSize) {
-            }
-                pushRequestQueue(&queue, connfd, overloadHandlerAlg, &arrivalTime);
+            
+            pushRequestQueue(&queue, connfd, overloadHandlerAlg, &arrivalTime);
 
             pthread_cond_signal(&emptyQueue);
             pthread_mutex_unlock(&lockQueue);
@@ -91,7 +90,14 @@ int main(int argc, char *argv[]) {
             pthread_mutex_unlock(&lockQueue);
             continue;
         } else if (strcmp(overloadHandlerAlg, "dh") == 0) {
-
+			if(queue.numOfRequests == 0){
+			  Close(connfd);
+			  pthread_mutex_unlock(&lockQueue);
+              continue;
+			}
+			request *req=popRequestQueue(&queue);
+			Close(req->connfd);
+			free(req);
             pushRequestQueue(&queue, connfd, overloadHandlerAlg, &arrivalTime);
             pthread_cond_signal(&emptyQueue);
             pthread_mutex_unlock(&lockQueue);
