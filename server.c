@@ -24,11 +24,12 @@ char *overloadHandlerAlg;
 
 requestQueue queue;
 
+pthread_mutex_t lockQueue;
+
 pthread_cond_t fullQueue;
 
 pthread_cond_t emptyQueue;
 
-pthread_mutex_t lockQueue;
 
 threadPool threadypool;
 
@@ -36,11 +37,12 @@ int main(int argc, char *argv[]) {
     overloadHandlerAlg = malloc((strlen(argv[4]) + 1) * sizeof(char));
     int listenfd, connfd, port, clientlen, numOfThreads, queueSize;
     getargs(&port, &numOfThreads, &queueSize, &overloadHandlerAlg, argc, argv);
+    InitRequestQueue(&queue, queueSize);
     struct timeval arrivalTime;
 
     pthread_mutex_init(&lockQueue, NONUSED_ATTR);
-    threadPoolInit(&threadypool, numOfThreads);
-    InitRequestQueue(&queue, queueSize);
+    
+    
     int worked = 0;
 
     worked = pthread_cond_init(&fullQueue, NULL);
@@ -55,7 +57,7 @@ int main(int argc, char *argv[]) {
 
     struct sockaddr_in clientaddr;
 
-
+	threadPoolInit(&threadypool, numOfThreads);
     listenfd = Open_listenfd(port);
 
     while (1) {
@@ -71,7 +73,6 @@ int main(int argc, char *argv[]) {
             pushRequestQueue(&queue, connfd, overloadHandlerAlg, &arrivalTime);
 
             pthread_cond_signal(&emptyQueue);
-            printf("inserted to end of queue (no drop needed)\n");
             pthread_mutex_unlock(&lockQueue);
             continue;
         }
@@ -86,13 +87,15 @@ int main(int argc, char *argv[]) {
             pthread_mutex_unlock(&lockQueue);
             continue;
         } else if (strcmp(overloadHandlerAlg, "dt") == 0) {
+			pthread_mutex_unlock(&lockQueue);
             Close(connfd);
-            pthread_mutex_unlock(&lockQueue);
+            
             continue;
         } else if (strcmp(overloadHandlerAlg, "dh") == 0) {
 			if(queue.numOfRequests == 0){
-			  Close(connfd);
+			  
 			  pthread_mutex_unlock(&lockQueue);
+			  Close(connfd);
               continue;
 			}
 			request *req=popRequestQueue(&queue);
@@ -106,21 +109,31 @@ int main(int argc, char *argv[]) {
             while (queue.numOfRequests + queue.requestsInProgress != 0) {
                 pthread_cond_wait(&fullQueue, &lockQueue);
             }
-            Close(connfd);
             pthread_mutex_unlock(&lockQueue);
+            Close(connfd);
+           
             continue;
         } else if (strcmp(overloadHandlerAlg, "dynamic") == 0) {
             if (queue.maxSize == queue.dynamicMax) {
+				pthread_mutex_unlock(&lockQueue);
                 Close(connfd);
-                pthread_mutex_unlock(&lockQueue);
+                
                 continue;
             } else {
+				pthread_mutex_unlock(&lockQueue);
                 Close(connfd);
                 queue.maxSize++;
-                pthread_mutex_unlock(&lockQueue);
+                
                 continue;
             }
         }
+        else if(queue.requestsInProgress == queue.maxSize){
+			pthread_mutex_unlock(&lockQueue);
+			Close(connfd);
+            queue.maxSize++;
+            
+            continue;
+		}
     }
 }
 
@@ -151,14 +164,13 @@ void threadPoolInit(threadPool *threadypoolP, int numOfThreads) {
     }
     threadypoolP->numOfThreads = numOfThreads;
     for (int i = 0; i < numOfThreads; ++i) {
-        threadypoolP->threadsArr[i].numOfRequests = 0;
         threadypoolP->threadsArr[i].threadId = i;
         threadypoolP->threadsArr[i].totalRequestsHandled = 0;
         threadypoolP->threadsArr[i].staticRequestHandled = 0;
         threadypoolP->threadsArr[i].dynamicRequesrHandled = 0;
         threadypoolP->threadsArr[i].workingOn = NULL;
         int worked = 0;
-        worked = pthread_create(&(threadypoolP->threadsArr[i].thready), NULL, &threadCodeToRun,
+        worked = pthread_create(&(threadypoolP->threadsArr[i].thready), NULL, threadCodeToRun,
                                 (void *) &(threadypoolP->threadsArr[i]));//Todo:implement threadCodeToRun
         if (worked != 0) {
             unix_error("failed to create thread");
@@ -197,8 +209,7 @@ void *threadCodeToRun(void *arguments) {
         free(requestToWork);
 
         pthread_mutex_lock(&lockQueue);
-        queue.requestsInProgress--;
-        printf("finished handling request\n");
+        (queue.requestsInProgress)--;
         pthread_cond_signal(&fullQueue);
 
         pthread_mutex_unlock(&lockQueue);

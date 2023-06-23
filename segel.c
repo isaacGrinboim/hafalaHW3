@@ -574,12 +574,11 @@ void InitRequestQueue(requestQueue *queue,int maxSize){
     queue->last = NULL;
     queue->numOfRequests = 0;
     queue->requestsInProgress = 0;
-    queue->dynamicMax = -1;
 }
 
 void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg, struct timeval* arrival){
 
-    printf("push: connfd: %d \n", connfd);
+
     request *requestToAdd = malloc(sizeof(request));
     requestToAdd->connfd = connfd;
     requestToAdd->arrival = *arrival;
@@ -599,17 +598,15 @@ void pushRequestQueue(requestQueue *queue, int connfd, char*  overLoadHandlerAlg
         queue->last->next = nodeToAdd;
         queue->last = nodeToAdd;
     }
-    ++queue->numOfRequests;
+    (queue->numOfRequests)++;
 
 }
 
 request* popRequestQueue(requestQueue *queue){
     if(!queue){
-        printf("error: got null ptr as queue\n");
         return NULL;
     }
     if(queue->numOfRequests == 0){
-        printf("error: requested to pop empty queue\n");
         return NULL;
         //Todo:return error schedalg
     }
@@ -618,7 +615,7 @@ request* popRequestQueue(requestQueue *queue){
 			request* toret = queue->first->req;
 			queue->first = NULL;
             queue->last = NULL;
-			queue->numOfRequests--;
+			(queue->numOfRequests)--;
             free (toFree);
 			return toret;
 	}                                         // NULL<-first->next->...->NULL
@@ -626,7 +623,7 @@ request* popRequestQueue(requestQueue *queue){
     request* toret = queue->first->req;    //printf("first is %p. queue has %d items.\n", queue->first, queue->numOfRequests);
     queue->first = toFree->next;
     queue->first->prev = NULL;
-    queue->numOfRequests--;
+    (queue->numOfRequests)--;
     free (toFree);
     return toret;
 }

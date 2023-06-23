@@ -148,7 +148,6 @@ typedef struct m_reqqueue{
 }requestQueue;
 typedef struct m_thread_node{
     pthread_t thready;
-    int numOfRequests;
     int threadId;
     int totalRequestsHandled;
     int staticRequestHandled;
