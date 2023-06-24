@@ -211,12 +211,11 @@ void *threadCodeToRun(void *arguments) {
 
         pthread_mutex_lock(&lockQueue);
         (queue.requestsInProgress)--;
+	pthread_cond_signal(&fullQueue);
         if(queue.numOfRequests + queue.requestsInProgress == 0){
             pthread_cond_signal(&notEmpty);
         }
-        else{
-            pthread_cond_signal(&fullQueue);
-        }
+        
         pthread_mutex_unlock(&lockQueue);
 
         if (worked != 0) {

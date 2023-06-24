@@ -206,10 +206,8 @@ void requestHandle(int fd, threadNode* threadyNode)
    rio_t rio;
 
    Rio_readinitb(&rio, fd);
-   printf("beefore\n");
    printf("fd: %d\n",fd);
    Rio_readlineb(&rio, buf, MAXLINE);
-   printf("after\n");
    sscanf(buf, "%s %s %s", method, uri, version);
 
    printf("%s %s %s\n", method, uri, version);
