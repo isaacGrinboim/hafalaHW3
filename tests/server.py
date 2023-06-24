@@ -8,16 +8,17 @@ import pytest
 
 
 class Server:
-    def __init__(self, path, port, threads, queue_size, policy):
+    def __init__(self, path, port, threads, queue_size, policy, max_queue_size=-1):
         self.path = str(path)
         self.port = str(port)
         self.threads = str(threads)
         self.queue_size = str(queue_size)
         self.policy = str(policy)
+        self.max_queue_size = str(max_queue_size)
 
     def __enter__(self):
         self.process = Popen([self.path, self.port, self.threads, self.queue_size,
-                             self.policy], stdout=PIPE, stderr=PIPE, cwd="..", bufsize=0, encoding=sys.getdefaultencoding())
+                             self.policy, self.max_queue_size], stdout=PIPE, stderr=PIPE, cwd="..", bufsize=0, encoding=sys.getdefaultencoding())
         return self.process
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
