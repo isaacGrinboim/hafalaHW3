@@ -30,6 +30,7 @@ pthread_cond_t fullQueue;
 
 pthread_cond_t emptyQueue;
 
+pthread_cond_t notEmpty;
 
 threadPool threadypool;
 
@@ -54,7 +55,7 @@ int main(int argc, char *argv[]) {
     if (worked != 0) {
         //Todo:: add error
     }
-
+    worked = pthread_cond_init(&notEmpty, NULL);
     struct sockaddr_in clientaddr;
 
 	threadPoolInit(&threadypool, numOfThreads);
@@ -107,7 +108,7 @@ int main(int argc, char *argv[]) {
             continue;
         } else if (strcmp(overloadHandlerAlg, "bf") == 0) {
             while (queue.numOfRequests + queue.requestsInProgress != 0) {
-                pthread_cond_wait(&fullQueue, &lockQueue);
+                pthread_cond_wait(&notEmpty, &lockQueue);
             }
             pthread_mutex_unlock(&lockQueue);
             Close(connfd);
@@ -210,8 +211,12 @@ void *threadCodeToRun(void *arguments) {
 
         pthread_mutex_lock(&lockQueue);
         (queue.requestsInProgress)--;
-        pthread_cond_signal(&fullQueue);
-
+        if(queue.numOfRequests + queue.requestsInProgress == 0){
+            pthread_cond_signal(&notEmpty);
+        }
+        else{
+            pthread_cond_signal(&fullQueue);
+        }
         pthread_mutex_unlock(&lockQueue);
 
         if (worked != 0) {
